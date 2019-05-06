@@ -16,11 +16,13 @@ class ViewController: UIViewController {
     
     @IBOutlet weak var collectionView: UICollectionView!
     
+    
     override func viewWillAppear(_ animated: Bool) {
         super.viewWillAppear(true)
         
         // Save the new items in the Managed Object Context
         store.saveContext()
+        updateDataSource()
     }
     
     override func viewDidLoad() {
@@ -34,7 +36,9 @@ class ViewController: UIViewController {
         flow.itemSize = CGSize(width: screenSize.width / 2 - horizontalPadding * 2, height: screenSize.width / 2 - verticalPadding * 2)
         flow.sectionInset = UIEdgeInsets(top: verticalPadding, left: horizontalPadding, bottom: verticalPadding, right: horizontalPadding)
         collectionView.collectionViewLayout = flow
+        updateDataSource()
     }
+    
 
     func createNewItem() -> Item {
         let newItem = NSEntityDescription.insertNewObject(forEntityName: "Item", into: store.persistentContainer.viewContext) as! Item
@@ -55,6 +59,23 @@ class ViewController: UIViewController {
     func deleteItem(at index: Int) {
         items.remove(at: index)
         collectionView.deleteItems(at: [IndexPath(row: index, section: 0)])
+    }
+    
+    // populate an array with fetched results on success, or to delete all items from that array on failure
+    private func updateDataSource() {
+        self.store.fetchPersistedData {
+            
+            (fetchItemsResult) in
+            
+            switch fetchItemsResult {
+            case let .success(items):
+                self.items = items
+            case .failure(_):
+                self.items.removeAll()
+            }
+            // reload the collection view's data source to present the current data set to the user
+            self.collectionView.reloadSections(IndexSet(integer: 0))
+        }
     }
     
     override func prepare(for segue: UIStoryboardSegue, sender: Any?) {
